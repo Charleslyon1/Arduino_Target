@@ -51,6 +51,16 @@ long debounce = 40;
 int command = 0;
 int previousCommand = 0;
 
+// Values needed for the sound sensor
+int soundSensor = 2; 
+int shotCounter = 0;
+bool targetsDropped = false;
+
+// Values needed for the timer
+unsigned long startMillis;
+unsigned long endMillis;
+bool triggerTimer = false;
+
 
 //======================================================================================================
 
@@ -73,8 +83,10 @@ void setup() {
    myServo2.write(0);
    myServo3.write(0);
    myServo4.write(120);
-}
 
+   // Attach sound sensors to pin for operation
+   pinMode(soundSensor, INPUT);
+}
 
 
 
@@ -99,6 +111,8 @@ void loop() {
     }
     previousCommand = command;
 
+    soundSensorRead();
+    scoreCalculation();
 }
 
 
@@ -109,6 +123,26 @@ void readFSRinputs(){
   fsrReading2 = analogRead(fsrPin2);
   fsrReading3 = analogRead(fsrPin3);
   fsrReading4 = analogRead(fsrPin4);
+}
+
+
+
+
+//This method will read sound input, to measure gunshots
+void soundSensorRead(){
+  int sensorValue = digitalRead(soundSensor);
+  if(sensorValue == 1){
+    if(shotCounter == 1){
+      if(!triggerTimer){
+        startMillis = millis();
+        triggerTimer = true;  
+      }
+    }
+    delay(50);
+    shotCounter++;
+    Serial.print("Shots fired: ");
+    Serial.println(shotCounter);
+  }
 }
 
 
@@ -129,7 +163,6 @@ void checkTargets(){
     isDropped1 = true;
     toggleTime = millis();
   }
-  delay(debounce);
   previous1 = fsrReading1;
 
 
@@ -138,8 +171,6 @@ void checkTargets(){
     isDropped2 = true;
     toggleTime = millis();
   }
-
-  delay(debounce);
   previous2 = fsrReading2;
 
 
@@ -148,8 +179,6 @@ void checkTargets(){
     isDropped3 = true;
     toggleTime = millis();
   }
- 
-  delay(debounce);
   previous3 = fsrReading3;
 
 
@@ -158,8 +187,6 @@ void checkTargets(){
     isDropped4 = true;
     toggleTime = millis();
   }
-  //digitalWrite(ledpin4, state4);
-  delay(debounce);
   previous4 = fsrReading4;
 }
 
@@ -170,11 +197,14 @@ void checkTargets(){
 void triggerTargetReset(){
     // Check if all FSRs sense that the target has fallen
     if(isDropped1 && isDropped2 && isDropped3 && isDropped4){
+
+        // Stops Timer
+        endMillis = millis();
       
         // Resets targets
         myServo1.write(120);
         delay (800);
-        myServo2.write(120);
+        myServo2.write(125);
         delay (800);
         myServo3.write(120);
         delay(800);
@@ -193,6 +223,9 @@ void triggerTargetReset(){
         isDropped2 = false;
         isDropped3 = false;
         isDropped4 = false;
+
+        // Used for score calculation
+        targetsDropped = true;
     }
 }
 
@@ -204,7 +237,7 @@ void forceReset(){
     // Resets targets
     myServo1.write(120);
     delay (800);
-    myServo2.write(120);
+    myServo2.write(125);
     delay (800);
     myServo3.write(120);
     delay(800);
@@ -223,6 +256,36 @@ void forceReset(){
     isDropped2 = false;
     isDropped3 = false;
     isDropped4 = false;
+}
+
+
+
+
+// Method that calculates score based on shots sensed
+void scoreCalculation(){
+    if(targetsDropped){
+      double math = (4.0/(double)shotCounter)*100.0;
+      Serial.print("Accuracy Score: ");
+      Serial.print(math);
+      Serial.println("%");
+      delay(100);
+      targetsDropped = false;
+      shotCounter = 0;
+      timerCalc();
+      triggerTimer = false;
+    }
+}
+
+
+
+
+// Method that handles a simple timer
+void timerCalc(){
+  double math = ((double)endMillis - (double)startMillis)/1000.00;
+  Serial.print("Time Taken: ");
+  Serial.print(math);
+  Serial.println(" seconds");
+  
 }
 
 
