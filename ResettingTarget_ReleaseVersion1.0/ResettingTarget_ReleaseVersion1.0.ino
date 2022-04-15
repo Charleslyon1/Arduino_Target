@@ -105,7 +105,7 @@ int state2 = LOW;
 int state3 = LOW;
 int state4 = LOW;
 
-// Booleans measuring if FSR is triggered
+// Booleans measuring if FSR is triggered 
 bool isDropped1;
 bool isDropped2;
 bool isDropped3;
